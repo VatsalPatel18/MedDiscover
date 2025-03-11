@@ -12,13 +12,18 @@ def extract_text_from_pdf(pdf_path):
         str: Extracted text.
     """
     text = ""
-    with open(pdf_path, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
+    try:
+        with open(pdf_path, "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+    except Exception as e:
+        text = f"Error reading {pdf_path}: {str(e)}"
+
     return text
+
 
 def process_pdf_folder(pdf_folder):
     """

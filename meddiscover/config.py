@@ -31,4 +31,4 @@ if OPENAI_API_KEY:
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 # LLM model for answer generation
-LLM_MODEL = "gpt-4"
+LLM_MODEL = "gpt-4o-mini-2024-07-18"

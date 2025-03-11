@@ -1,16 +1,10 @@
 from config import LLM_MODEL
 import openai
+from openai import OpenAI
 
 def get_llm_answer(query, retrieved_candidates):
     """
-    Generate an answer using an LLM (e.g. GPT-4) based on retrieved candidate texts.
-    
-    Parameters:
-        query (str): The user query.
-        retrieved_candidates (list): List of candidate documents.
-        
-    Returns:
-        tuple: (answer, context_text) where answer is the LLM-generated answer.
+    Generate an answer using an LLM based on retrieved candidate texts.
     """
     # Combine the top candidate texts into a context.
     context_text = " ".join([cand["text"] for cand in retrieved_candidates])
@@ -19,17 +13,25 @@ def get_llm_answer(query, retrieved_candidates):
     
     Context:
     {context_text}
-    
+
     Question: {query}
-    
+
     Answer (in minimal words):
     """
-    # Call the OpenAI API for LLM completion.
-    response = openai.Completion.create(
-        engine=LLM_MODEL,
-        prompt=prompt,
+    client = OpenAI()
+
+    # Use ChatCompletion instead of the old Completion
+    response = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[
+            {"role": "system", "content": "You are MedDiscover, an assitant for enhancing disease discovery. You are RAG-LLM, connected with a specific vector database."},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=20,
         temperature=0
     )
-    answer = response.choices[0].text.strip()
+
+    # The answer is in `message.content`
+    answer = response.choices[0].message.content.strip()
     return answer, context_text
+
