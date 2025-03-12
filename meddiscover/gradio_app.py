@@ -78,7 +78,7 @@ def query_chat(query):
         return "Please process PDFs first."
     candidates = search_with_rerank(query, global_index, global_metadata, k=5)
     answer, context_text = get_llm_answer(query, candidates)
-    return f"Answer: {answer}\n\nContext (first 300 chars): {context_text[:300]}..."
+    return f"Answer: {answer}\n\nContext (first 300 chars): {context_text[:300]}... with actual context length being : {len(context_text)}"
 
 def set_api_key(api_key):
     import os
@@ -88,7 +88,7 @@ def set_api_key(api_key):
 def shutdown_app():
     def stop():
         time.sleep(1)
-        os.kill(os.getpid(), signal.SIGTERM)  # Send SIGTERM to the current process to stop Gradio
+        os.kill(os.getpid(), signal.SIGTERM) 
     threading.Thread(target=stop).start()
     return "Server shutting down..."
 
