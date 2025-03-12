@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "meddiscover"
+name = "Med-Discover"
 version = "0.1.0"
-description = "MedDiscover is an AI-powered tool designed to assist biomedical researchers by leveraging Retrieval-Augmented Generation (RAG) with fine-tuned LLMs on PubMed literature. It enables efficient document retrieval, knowledge extraction, and interactive querying from biomedical research papers, helping researchers find relevant insights quickly. The package supports both GPU-based embeddings (MedCPT) and CPU-friendly alternatives (GPT-4 embeddings), making it accessible for a wide range of users."
+description = "Med-Discover is an AI-powered tool designed to assist biomedical researchers by leveraging Retrieval-Augmented Generation (RAG) with fine-tuned LLMs on PubMed literature. It enables efficient document retrieval, knowledge extraction, and interactive querying from biomedical research papers, helping researchers find relevant insights quickly. The package supports both GPU-based embeddings (MedCPT) and CPU-friendly alternatives (GPT-4 embeddings), making it accessible for a wide range of users."
 authors = ["VatsalPatel18 <vatsal1804@gmail.com>"]
 license = "CC BY-NC-ND 4.0"
 readme = "README.md"
@@ -22,6 +22,8 @@ pandas = "^2.2.3"
 scipy = "^1.15.2"
 statsmodels = "^0.14.4"
 
+[tool.poetry.scripts]
+meddiscover = "meddiscover.main:main"
 
 [build-system]
 requires = ["poetry-core"]
