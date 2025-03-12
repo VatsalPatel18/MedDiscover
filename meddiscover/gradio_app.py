@@ -7,6 +7,9 @@ from retrieval import search_with_rerank
 from llm_inference import get_llm_answer
 import os
 import json
+import signal
+import threading
+import time
 
 # Global variables to store the built index and metadata during the session.
 global_index = None
@@ -83,13 +86,15 @@ def set_api_key(api_key):
     return "API key set successfully!"
 
 def shutdown_app():
-    demo.close()
+    def stop():
+        time.sleep(1)
+        os.kill(os.getpid(), signal.SIGTERM)  # Send SIGTERM to the current process to stop Gradio
+    threading.Thread(target=stop).start()
     return "Server shutting down..."
-
 
 def build_interface():
     with gr.Blocks() as demo:
-        gr.Markdown("# RAG-LLM Metabolomics Tool")
+        gr.Markdown("# Med-Discover")
 
         with gr.Row():
             with gr.Column(scale=1):

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from config import USE_GPU, ARTICLE_ENCODER_MODEL, EMBEDDING_MODEL, MAX_ARTICLE_LENGTH
+from openai import OpenAI
 
 if USE_GPU:
     from transformers import AutoTokenizer, AutoModel
@@ -39,9 +40,12 @@ def embed_documents(doc_chunks, batch_size=8):
     else:
         # For CPU users, call the OpenAI embedding API.
         embeddings = []
+        client = OpenAI()
+
         for text in doc_chunks:
-            response = openai.Embedding.create(input=text, model=EMBEDDING_MODEL)
-            embed = response["data"][0]["embedding"]
+            response = client.embeddings.create(input=text, model=EMBEDDING_MODEL)
+            embed = response.data[0].embedding
+            # embed = response["data"][0].embedding
             embeddings.append(embed)
         return np.array(embeddings)
 
@@ -69,7 +73,7 @@ def embed_query(query, max_query_length=64):
         return outputs.cpu().numpy()
     else:
         # For CPU, use OpenAI's API for query embeddings.
-        import openai
-        response = openai.Embedding.create(input=query, model=EMBEDDING_MODEL)
-        embed = response["data"][0]["embedding"]
+        client = OpenAI()
+        response = client.embeddings.create(input=query, model=EMBEDDING_MODEL)
+        embed = response.data[0].embedding
         return np.array([embed])

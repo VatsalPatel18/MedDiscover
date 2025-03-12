@@ -5,14 +5,20 @@ import torch
 USE_GPU = torch.cuda.is_available()
 
 if USE_GPU:
+    print('GPU is available')
     # GPU mode: use MedCPT models.
     ARTICLE_ENCODER_MODEL = "ncbi/MedCPT-Article-Encoder"
     QUERY_ENCODER_MODEL = "ncbi/MedCPT-Query-Encoder"
     CROSS_ENCODER_MODEL = "ncbi/MedCPT-Cross-Encoder"
     # Define EMBEDDING_MODEL even if it won’t be used in GPU branch.
-    EMBEDDING_MODEL = "text-embedding-ada-002"
+    EMBEDDING_MODEL = None
 else:
+    print('GPU is not available')
     # CPU mode: use OpenAI's embedding model.
+    ARTICLE_ENCODER_MODEL = None
+    QUERY_ENCODER_MODEL = None
+    CROSS_ENCODER_MODEL = None
+
     EMBEDDING_MODEL = "text-embedding-ada-002"
 
 # Common configuration parameters
