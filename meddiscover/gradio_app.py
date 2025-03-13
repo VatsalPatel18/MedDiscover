@@ -1,10 +1,10 @@
 import gradio as gr
-from pdf_utils import extract_text_from_pdf
-from chunking import chunk_text
-from embeddings import embed_documents
-from index import build_faiss_index, save_index
-from retrieval import search_with_rerank
-from llm_inference import get_llm_answer
+from meddiscover.pdf_utils import extract_text_from_pdf
+from meddiscover.chunking import chunk_text
+from meddiscover.embeddings import embed_documents
+from meddiscover.index import build_faiss_index, save_index
+from meddiscover.retrieval import search_with_rerank
+from meddiscover.llm_inference import get_llm_answer
 import os
 import json
 import signal

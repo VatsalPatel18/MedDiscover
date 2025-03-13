@@ -1,4 +1,4 @@
-from config import LLM_MODEL
+from meddiscover.config import LLM_MODEL
 import openai
 from openai import OpenAI
 

@@ -1,29 +1,32 @@
 [tool.poetry]
-name = "Med-Discover"
-version = "0.1.0"
-description = "Med-Discover is an AI-powered tool designed to assist biomedical researchers by leveraging Retrieval-Augmented Generation (RAG) with fine-tuned LLMs on PubMed literature. It enables efficient document retrieval, knowledge extraction, and interactive querying from biomedical research papers, helping researchers find relevant insights quickly. The package supports both GPU-based embeddings (MedCPT) and CPU-friendly alternatives (GPT-4 embeddings), making it accessible for a wide range of users."
+name = "meddiscover"
+version = "0.1.2"
+description = "MedDiscover is an AI-powered tool designed to assist biomedical researchers by leveraging Retrieval-Augmented Generation (RAG) with fine-tuned LLMs on PubMed literature. It enables efficient document retrieval, knowledge extraction, and interactive querying from biomedical research papers, helping researchers find relevant insights quickly. The package supports both GPU-based embeddings (MedCPT) and CPU-friendly alternatives (GPT-4 embeddings), making it accessible for a wide range of users."
 authors = ["VatsalPatel18 <vatsal1804@gmail.com>"]
 license = "CC BY-NC-ND 4.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-torch = "^2.6.0"
-faiss-cpu = "^1.10.0"
-pypdf2 = "^3.0.1"
-transformers = "^4.49.0"
-numpy = "^2.2.3"
-openai = "^1.65.4"
-python-dotenv = "^1.0.1"
-gradio = "^5.20.1"
-nltk = "^3.9.1"
-rouge-score = "^0.1.2"
-pandas = "^2.2.3"
-scipy = "^1.15.2"
-statsmodels = "^0.14.4"
+python = ">=3.11" 
+torch = ">=2.0.0"  
+torchvision = ">=0.15.0,<0.20.0"
+faiss-cpu = ">=1.7.0" 
+pypdf2 = ">=3.0.0" 
+transformers = ">=4.30.0,<4.50.0"
+numpy = ">=1.23.0" 
+openai = ">=1.0.0"  
+python-dotenv = ">=1.0.0"   
+gradio = ">=4.0.0"  
+nltk = ">=3.8.0" 
+rouge-score = ">=0.1.0" 
+pandas = ">=2.0.0" 
+scipy = ">=1.10.0"  
+statsmodels = ">=0.14.0" 
+
 
 [tool.poetry.scripts]
 meddiscover = "meddiscover.main:main"
+
 
 [build-system]
 requires = ["poetry-core"]

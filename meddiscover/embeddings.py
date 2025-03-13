@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from config import USE_GPU, ARTICLE_ENCODER_MODEL, EMBEDDING_MODEL, MAX_ARTICLE_LENGTH
+from meddiscover.config import USE_GPU, ARTICLE_ENCODER_MODEL, EMBEDDING_MODEL, MAX_ARTICLE_LENGTH
 from openai import OpenAI
 
 if USE_GPU:
