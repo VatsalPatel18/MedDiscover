@@ -1,4 +1,4 @@
-from meddiscover.config import LLM_MODEL
+from med_discover_ai.config import LLM_MODEL
 import openai
 from openai import OpenAI
 
@@ -24,7 +24,7 @@ def get_llm_answer(query, retrieved_candidates):
     response = client.chat.completions.create(
         model=LLM_MODEL,
         messages=[
-            {"role": "system", "content": "You are MedDiscover, an assitant for enhancing disease discovery. You are RAG-LLM, connected with a specific vector database."},
+            {"role": "system", "content": "You are Med-Discover, an assitant for enhancing disease discovery. You are RAG-LLM, connected with a specific vector database."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=20,

@@ -1,7 +1,7 @@
-from meddiscover.embeddings import embed_query
-from meddiscover.index import load_index
+from med_discover_ai.embeddings import embed_query
+from med_discover_ai.index import load_index
 import json
-from meddiscover.config import DOC_META_PATH
+from med_discover_ai.config import DOC_META_PATH
 
 def load_metadata(meta_path=DOC_META_PATH):
     """

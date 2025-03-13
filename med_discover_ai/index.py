@@ -1,6 +1,6 @@
 import faiss
 import numpy as np
-from meddiscover.config import INDEX_SAVE_PATH
+from med_discover_ai.config import INDEX_SAVE_PATH
 
 def build_faiss_index(embeddings):
     """

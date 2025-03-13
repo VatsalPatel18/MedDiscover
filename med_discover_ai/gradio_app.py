@@ -1,10 +1,10 @@
 import gradio as gr
-from meddiscover.pdf_utils import extract_text_from_pdf
-from meddiscover.chunking import chunk_text
-from meddiscover.embeddings import embed_documents
-from meddiscover.index import build_faiss_index, save_index
-from meddiscover.retrieval import search_with_rerank
-from meddiscover.llm_inference import get_llm_answer
+from med_discover_ai.pdf_utils import extract_text_from_pdf
+from med_discover_ai.chunking import chunk_text
+from med_discover_ai.embeddings import embed_documents
+from med_discover_ai.index import build_faiss_index, save_index
+from med_discover_ai.retrieval import search_with_rerank
+from med_discover_ai.llm_inference import get_llm_answer
 import os
 import json
 import signal
@@ -21,10 +21,10 @@ def process_pdfs(pdf_paths):
     and build the FAISS index.
     """
     import os, json
-    from meddiscover.pdf_utils import extract_text_from_pdf
-    from meddiscover.chunking import chunk_text
-    from meddiscover.embeddings import embed_documents
-    from meddiscover.index import build_faiss_index
+    from med_discover_ai.pdf_utils import extract_text_from_pdf
+    from med_discover_ai.chunking import chunk_text
+    from med_discover_ai.embeddings import embed_documents
+    from med_discover_ai.index import build_faiss_index
 
     TEMP_PDF_FOLDER = "./temp_pdfs"
     if not os.path.exists(TEMP_PDF_FOLDER):
