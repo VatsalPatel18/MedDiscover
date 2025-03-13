@@ -21,10 +21,10 @@ def process_pdfs(pdf_paths):
     and build the FAISS index.
     """
     import os, json
-    from pdf_utils import extract_text_from_pdf
-    from chunking import chunk_text
-    from embeddings import embed_documents
-    from index import build_faiss_index
+    from meddiscover.pdf_utils import extract_text_from_pdf
+    from meddiscover.chunking import chunk_text
+    from meddiscover.embeddings import embed_documents
+    from meddiscover.index import build_faiss_index
 
     TEMP_PDF_FOLDER = "./temp_pdfs"
     if not os.path.exists(TEMP_PDF_FOLDER):

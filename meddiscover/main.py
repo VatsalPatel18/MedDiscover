@@ -1,5 +1,8 @@
 from meddiscover.gradio_app import build_interface
 
-if __name__ == "__main__":
+def main():
     demo = build_interface()
-    demo.launch()
+    demo.launch(share=True)
+
+if __name__ == "__main__":
+    main()
