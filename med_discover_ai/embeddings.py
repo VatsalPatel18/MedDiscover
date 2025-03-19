@@ -70,6 +70,7 @@ def embed_query(query):
             for key in encoded:
                 encoded[key] = encoded[key].to("cuda")
             outputs = query_model(**encoded).last_hidden_state[:, 0, :]
+        print('query embedded in MedCPT')
         return outputs.cpu().numpy()
     else:
         # For CPU, use OpenAI's API for query embeddings

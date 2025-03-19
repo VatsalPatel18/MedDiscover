@@ -44,8 +44,10 @@ def rerank(query, candidates):
             for k in encoded:
                 encoded[k] = encoded[k].to("cuda")
             logits = cross_model(**encoded).logits.squeeze(dim=1)
+        print('re-ranked with MedCPT')
         return logits.cpu().numpy()
     else:
+        print('no re-rank performed')
         return [candidate["retrieval_score"] for candidate in candidates]
 
 def search_with_rerank(query, index, doc_metadata, k=5):
@@ -78,4 +80,6 @@ def search_with_rerank(query, index, doc_metadata, k=5):
     
     # Sort by re-rank scores
     candidates = sorted(candidates, key=lambda x: x["rerank_score"], reverse=True)
+
+    print('searched with re-rank')
     return candidates
