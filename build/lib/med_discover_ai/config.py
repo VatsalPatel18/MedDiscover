@@ -24,7 +24,7 @@ else:
 # Common configuration parameters
 CHUNK_SIZE = 500
 OVERLAP = 50
-MAX_ARTICLE_LENGTH = 1024*10*2
+MAX_ARTICLE_LENGTH = 512
 MAX_QUERY_LENGTH = 64
 
 DEFAULT_PDF_FOLDER = "./sample_pdf_rag"

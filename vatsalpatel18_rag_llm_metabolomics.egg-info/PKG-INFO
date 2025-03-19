@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: vatsalpatel18_rag_llm_metabolomics
+Version: 0.1.0
+Summary: A tool for RAG-LLM performance analysis on research papers (metabolomics) with support for GPU and CPU modes.
+Author: Vatsal Patel
+Requires-Dist: torch
+Requires-Dist: faiss-cpu
+Requires-Dist: PyPDF2
+Requires-Dist: transformers
+Requires-Dist: numpy
+Requires-Dist: openai
+Requires-Dist: python-dotenv
+Requires-Dist: gradio
+Requires-Dist: nltk
+Requires-Dist: rouge-score
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: statsmodels

@@ -9,7 +9,7 @@ def get_llm_answer(query, retrieved_candidates):
     # Combine the top candidate texts into a context.
     context_text = " ".join([cand["text"] for cand in retrieved_candidates])
     prompt = f"""
-    Use the context below to answer the question in as few words as possible.
+    You are a knowledgeable assistant. Use the context below to answer the question in as few words as possible.
     
     Context:
     {context_text}
@@ -27,7 +27,7 @@ def get_llm_answer(query, retrieved_candidates):
             {"role": "system", "content": "You are Med-Discover, an assitant for enhancing disease discovery. You are RAG-LLM, connected with a specific vector database."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=30,
+        max_tokens=20,
         temperature=0
     )
 
