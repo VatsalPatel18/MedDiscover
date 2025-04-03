@@ -49,10 +49,12 @@ else:
 # List of available LLM models for the UI dropdown
 AVAILABLE_LLM_MODELS = ["gpt-4o", "gpt-4o-mini-2024-07-18"]
 # Default LLM model to use for answer generation
-DEFAULT_LLM_MODEL = "gpt-4o" # Changed default to gpt-4o as requested
+DEFAULT_LLM_MODEL = "gpt-4o"
+# Default max tokens for LLM response generation
+DEFAULT_MAX_TOKENS = 75 # Increased default slightly
 
 # --- Retrieval Configuration ---
-DEFAULT_K = 5 # Default number of chunks to retrieve
+DEFAULT_K = 3 # Default number of chunks to retrieve (Changed from 5)
 DEFAULT_RERANK_ENABLED = True # Default state for enabling/disabling re-ranking (primarily affects GPU mode)
 
 # --- Device Configuration ---
