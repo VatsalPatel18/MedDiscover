@@ -1,20 +1,20 @@
 # med_discover_ai/llm_inference.py
-import openai
-from openai import OpenAI, APIKeyMissingError
+import openai # Import base library
+# Removed direct import of APIKeyMissingError
 from med_discover_ai.config import DEFAULT_LLM_MODEL # Import default
 
 # --- Global OpenAI Client ---
-# Reuse the client initialized in embeddings.py if possible, or initialize here.
-# For simplicity here, we assume it might need its own initialization or rely on the global env var.
+# Attempt to initialize the client. It might fail if the key is missing initially.
 try:
-    client = OpenAI()
-    # Check if the API key is available
-    # client.models.list() # Optional check - might fail if key is missing
-except APIKeyMissingError:
-    print("LLM Inference Warning: OpenAI API Key is missing. Set it via environment or UI.")
-    client = None # Indicate client is not ready
+    # Use openai.OpenAI() which automatically looks for the API key
+    # in environment variables or other configurations.
+    client = openai.OpenAI()
+    # You could add an optional check here, but errors are usually caught during API calls.
+    # client.models.list()
 except Exception as e:
-    print(f"LLM Inference Error: Could not initialize OpenAI client: {e}")
+    # This initialization itself shouldn't fail due to missing key,
+    # but other issues might occur.
+    print(f"LLM Inference Warning: Could not initialize OpenAI client: {e}")
     client = None
 
 # --- LLM Answer Generation ---
@@ -35,20 +35,20 @@ def get_llm_answer(query, retrieved_candidates, llm_model=DEFAULT_LLM_MODEL):
     """
     global client # Access the potentially initialized client
 
+    # Check if client is initialized, try again if not (e.g., key set via UI)
     if client is None:
-        # Try to re-initialize if it wasn't ready before (e.g., key set later via UI)
+        print("LLM client not ready, attempting re-initialization...")
         try:
-            client = OpenAI()
-            # client.models.list() # Optional check
-        except APIKeyMissingError:
-             return "Error: OpenAI API Key is missing. Cannot generate answer.", ""
+            client = openai.OpenAI()
+            # Optional check: client.models.list()
+            print("LLM client re-initialized.")
         except Exception as e:
+             # If re-initialization fails, return error immediately
              return f"Error: Failed to initialize OpenAI client: {e}", ""
 
+    # Proceed with context preparation and API call
     if not retrieved_candidates:
-        print("Warning: No candidates provided to generate LLM answer.")
-        # Decide how to handle: Query LLM without context, or return specific message?
-        # For now, let's try querying without context, but adjust prompt.
+        print("Warning: No candidates provided to generate LLM answer. Querying without context.")
         context_text = ""
         prompt = f"""
         Answer the following question concisely, in as few words as possible, based on general knowledge.
@@ -58,11 +58,7 @@ def get_llm_answer(query, retrieved_candidates, llm_model=DEFAULT_LLM_MODEL):
         Answer (in minimal words):
         """
     else:
-        # Combine the top candidate texts into a context.
-        # Consider limiting the context size if necessary, e.g., join only top 3 candidates
-        context_text = " ".join([cand["text"] for cand in retrieved_candidates]) # Using all provided candidates
-        # Optional: Add truncation logic here if context_text is too long for the model
-
+        context_text = " ".join([cand["text"] for cand in retrieved_candidates])
         prompt = f"""
         You are Med-Discover, an assistant for enhancing disease discovery, using provided context from research papers.
         Use ONLY the context below to answer the question in as few words as possible. If the context doesn't contain the answer, say "Information not found in context".
@@ -78,30 +74,20 @@ def get_llm_answer(query, retrieved_candidates, llm_model=DEFAULT_LLM_MODEL):
     print(f"Generating LLM answer using model: {llm_model}...")
 
     try:
-        # Use the ChatCompletion endpoint
         response = client.chat.completions.create(
             model=llm_model,
-            messages=[
-                # System message sets the persona (optional but good practice)
-                # {"role": "system", "content": "You are Med-Discover, an AI assistant specialized in biomedical research."},
-                # User message contains the prompt with context and question
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=50,  # Increased slightly for potentially more nuanced short answers
-            temperature=0.1 # Low temperature for factual, concise answers
-            # top_p=1.0, # Default
-            # frequency_penalty=0.0, # Default
-            # presence_penalty=0.0 # Default
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0.1
         )
-
-        # Extract the answer from the response
         answer = response.choices[0].message.content.strip()
         print("LLM answer generated successfully.")
         return answer, context_text
 
-    except APIKeyMissingError:
+    # Catch specific OpenAI errors using the openai.ErrorName convention
+    except openai.APIKeyMissingError:
         print("Error: OpenAI API Key is missing. Cannot generate LLM answer.")
-        return "Error: OpenAI API Key is missing.", context_text
+        return "Error: OpenAI API Key is missing. Please set it via environment variable or the UI.", context_text
     except openai.RateLimitError:
         print("Error: OpenAI rate limit exceeded.")
         return "Error: Rate limit exceeded. Please try again later.", context_text
@@ -109,6 +95,7 @@ def get_llm_answer(query, retrieved_candidates, llm_model=DEFAULT_LLM_MODEL):
          print("Error: OpenAI authentication failed. Check your API key.")
          return "Error: Invalid OpenAI API Key.", context_text
     except Exception as e:
+        # Catch any other unexpected errors during the API call
         print(f"Error during LLM inference with model {llm_model}: {e}")
         return f"Error generating answer: {e}", context_text
 

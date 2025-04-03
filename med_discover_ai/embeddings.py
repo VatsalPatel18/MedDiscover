@@ -1,11 +1,12 @@
 # med_discover_ai/embeddings.py
 import numpy as np
 import torch
+import openai # Import the base library
 from med_discover_ai.config import (
     USE_GPU, ARTICLE_ENCODER_MODEL, QUERY_ENCODER_MODEL, EMBEDDING_MODEL,
     MAX_ARTICLE_LENGTH, MAX_QUERY_LENGTH, DEVICE, OPENAI_API_KEY
 )
-from openai import OpenAI, APIKeyMissingError
+# Removed the direct import of APIKeyMissingError
 
 # --- Global Variables for Models (initialized conditionally) ---
 article_tokenizer = None
@@ -33,23 +34,19 @@ def initialize_models():
             print("MedCPT models loaded successfully.")
         except ImportError:
             print("Error: 'transformers' library not found. Cannot use MedCPT models.")
-            # Fallback or raise error? For now, just print.
         except Exception as e:
             print(f"Error loading MedCPT models: {e}")
 
-    # Initialize OpenAI client regardless of GPU, as it's needed for LLM generation
-    # and potentially for CPU-based embeddings.
+    # Initialize OpenAI client regardless of GPU
     try:
         # The client automatically uses the OPENAI_API_KEY environment variable if set.
-        # If not set, it might raise an error later when an API call is made,
-        # unless the key is provided dynamically (e.g., via the UI).
-        openai_client = OpenAI()
-        # You could add a check here if needed, but typically the error occurs on the first API call.
+        openai_client = openai.OpenAI() # Use openai.OpenAI
+        # Optional check (lightweight API call)
         # try:
-        #     openai_client.models.list() # Example lightweight call to check connectivity/key
-        #     print("OpenAI client initialized successfully.")
-        # except APIKeyMissingError:
-        #     print("Warning: OpenAI API Key is missing. Please set it via environment variable or UI.")
+        #     openai_client.models.list()
+        #     print("OpenAI client initialized and key verified.")
+        # except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
+        #     print("Warning: OpenAI API Key is missing or invalid. Please set it via environment variable or UI.")
         # except Exception as e:
         #     print(f"Warning: Could not verify OpenAI connection: {e}")
     except Exception as e:
@@ -78,26 +75,16 @@ def embed_documents(doc_chunks, batch_size=8):
         for i in range(0, len(doc_chunks), batch_size):
             batch = doc_chunks[i:i + batch_size]
             try:
-                with torch.no_grad(): # Disable gradient calculations for inference
-                    # Tokenize the batch
+                with torch.no_grad():
                     encoded = article_tokenizer(
-                        batch,
-                        truncation=True,
-                        padding=True,
-                        return_tensors="pt",
-                        max_length=MAX_ARTICLE_LENGTH
+                        batch, truncation=True, padding=True, return_tensors="pt", max_length=MAX_ARTICLE_LENGTH
                     )
-                    # Move tensors to the configured device (GPU)
                     encoded = {key: val.to(DEVICE) for key, val in encoded.items()}
-
-                    # Get model outputs
                     outputs = article_model(**encoded)
-                    # Extract the [CLS] token embedding (or mean pooling if preferred)
                     batch_embeds = outputs.last_hidden_state[:, 0, :].cpu().numpy()
                     all_embeds.append(batch_embeds)
             except Exception as e:
                 print(f"Error embedding batch {i//batch_size}: {e}")
-                # Optionally decide how to handle errors, e.g., skip batch, return partial results
 
         if all_embeds:
             print("Document embedding finished.")
@@ -111,22 +98,17 @@ def embed_documents(doc_chunks, batch_size=8):
         print(f"Embedding {len(doc_chunks)} chunks using OpenAI '{EMBEDDING_MODEL}' (CPU)...")
         for i, text in enumerate(doc_chunks):
             try:
-                # Ensure text is not empty or just whitespace
                 if not text or text.isspace():
                     print(f"Warning: Skipping empty chunk at index {i}.")
-                    # Add a zero vector or handle as appropriate
-                    # For now, skipping, which might cause index misalignment if not handled later
                     continue
-
                 response = openai_client.embeddings.create(input=text, model=EMBEDDING_MODEL)
                 embed = response.data[0].embedding
                 embeddings.append(embed)
-            except APIKeyMissingError:
+            except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
                  print("Error: OpenAI API Key is missing. Cannot generate embeddings. Please set the key.")
                  return np.array([]) # Stop embedding process
             except Exception as e:
                 print(f"Error embedding chunk {i} with OpenAI: {e}")
-                # Handle error, e.g., skip chunk, add zero vector
         print("Document embedding finished.")
         return np.array(embeddings)
     else:
@@ -153,17 +135,13 @@ def embed_query(query):
         try:
             with torch.no_grad():
                 encoded = query_tokenizer(
-                    query,
-                    truncation=True,
-                    padding=True,
-                    return_tensors="pt",
-                    max_length=MAX_QUERY_LENGTH
+                    query, truncation=True, padding=True, return_tensors="pt", max_length=MAX_QUERY_LENGTH
                 )
                 encoded = {key: val.to(DEVICE) for key, val in encoded.items()}
                 outputs = query_model(**encoded)
                 query_embedding = outputs.last_hidden_state[:, 0, :].cpu().numpy()
             print("Query embedding finished.")
-            return query_embedding # Shape should be [1, 768]
+            return query_embedding
         except Exception as e:
             print(f"Error embedding query with MedCPT: {e}")
             return None
@@ -171,16 +149,14 @@ def embed_query(query):
         # --- CPU Mode: Use OpenAI Embedding API ---
         print(f"Embedding query using OpenAI '{EMBEDDING_MODEL}' (CPU)...")
         try:
-             # Ensure query is not empty
             if not query or query.isspace():
                 print("Error: Cannot embed empty query.")
                 return None
-
             response = openai_client.embeddings.create(input=query, model=EMBEDDING_MODEL)
             embed = response.data[0].embedding
             print("Query embedding finished.")
-            return np.array([embed]) # Shape needs to be [1, 1536] for FAISS search
-        except APIKeyMissingError:
+            return np.array([embed])
+        except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
             print("Error: OpenAI API Key is missing. Cannot generate query embedding. Please set the key.")
             return None
         except Exception as e:
