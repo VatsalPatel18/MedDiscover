@@ -3,52 +3,70 @@ import numpy as np
 import torch
 import openai # Import the base library
 from med_discover_ai.config import (
-    USE_GPU, ARTICLE_ENCODER_MODEL, QUERY_ENCODER_MODEL, EMBEDDING_MODEL,
-    MAX_ARTICLE_LENGTH, MAX_QUERY_LENGTH, DEVICE, OPENAI_API_KEY
+    USE_GPU, DEVICE,
+    MAX_ARTICLE_LENGTH, MAX_QUERY_LENGTH,
+    get_embedding_model_id, get_embedding_dimension # Use helper functions
 )
-# Removed the direct import of APIKeyMissingError
+# Import specific model names only if needed for loading logic
+from med_discover_ai.config import ARTICLE_ENCODER_MODEL as MEDCPT_ARTICLE_MODEL_ID
+from med_discover_ai.config import QUERY_ENCODER_MODEL as MEDCPT_QUERY_MODEL_ID
+from med_discover_ai.config import OPENAI_EMBEDDING_MODEL_ID
 
 # --- Global Variables for Models (initialized conditionally) ---
-article_tokenizer = None
-article_model = None
-query_tokenizer = None
-query_model = None
+# MedCPT models (loaded only if USE_GPU is True)
+medcpt_article_tokenizer = None
+medcpt_article_model = None
+medcpt_query_tokenizer = None
+medcpt_query_model = None
+# OpenAI client (initialized regardless)
 openai_client = None
 
 # --- Initialization ---
 def initialize_models():
-    """Initializes models based on GPU availability."""
-    global article_tokenizer, article_model, query_tokenizer, query_model, openai_client
+    """Initializes models based on GPU availability and API keys."""
+    global medcpt_article_tokenizer, medcpt_article_model, medcpt_query_tokenizer, medcpt_query_model
+    global openai_client
 
     if USE_GPU:
         try:
             from transformers import AutoTokenizer, AutoModel
-            print("Loading MedCPT models for GPU...")
-            article_tokenizer = AutoTokenizer.from_pretrained(ARTICLE_ENCODER_MODEL)
-            article_model = AutoModel.from_pretrained(ARTICLE_ENCODER_MODEL).to(DEVICE)
-            article_model.eval() # Set model to evaluation mode
+            print("GPU detected. Loading MedCPT models...")
+            # Load Article Encoder
+            if MEDCPT_ARTICLE_MODEL_ID:
+                medcpt_article_tokenizer = AutoTokenizer.from_pretrained(MEDCPT_ARTICLE_MODEL_ID)
+                medcpt_article_model = AutoModel.from_pretrained(MEDCPT_ARTICLE_MODEL_ID).to(DEVICE)
+                medcpt_article_model.eval()
+                print(f"MedCPT Article Encoder ({MEDCPT_ARTICLE_MODEL_ID}) loaded.")
+            else:
+                print("Warning: MedCPT Article Encoder model ID not configured.")
 
-            query_tokenizer = AutoTokenizer.from_pretrained(QUERY_ENCODER_MODEL)
-            query_model = AutoModel.from_pretrained(QUERY_ENCODER_MODEL).to(DEVICE)
-            query_model.eval() # Set model to evaluation mode
-            print("MedCPT models loaded successfully.")
+            # Load Query Encoder
+            if MEDCPT_QUERY_MODEL_ID:
+                medcpt_query_tokenizer = AutoTokenizer.from_pretrained(MEDCPT_QUERY_MODEL_ID)
+                medcpt_query_model = AutoModel.from_pretrained(MEDCPT_QUERY_MODEL_ID).to(DEVICE)
+                medcpt_query_model.eval()
+                print(f"MedCPT Query Encoder ({MEDCPT_QUERY_MODEL_ID}) loaded.")
+            else:
+                print("Warning: MedCPT Query Encoder model ID not configured.")
+
         except ImportError:
             print("Error: 'transformers' library not found. Cannot use MedCPT models.")
         except Exception as e:
             print(f"Error loading MedCPT models: {e}")
+    else:
+        print("GPU not available. MedCPT models will not be loaded.")
 
-    # Initialize OpenAI client regardless of GPU
+    # Initialize OpenAI client
     try:
-        # The client automatically uses the OPENAI_API_KEY environment variable if set.
-        openai_client = openai.OpenAI() # Use openai.OpenAI
-        # Optional check (lightweight API call)
-        # try:
-        #     openai_client.models.list()
-        #     print("OpenAI client initialized and key verified.")
-        # except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
-        #     print("Warning: OpenAI API Key is missing or invalid. Please set it via environment variable or UI.")
-        # except Exception as e:
-        #     print(f"Warning: Could not verify OpenAI connection: {e}")
+        openai_client = openai.OpenAI()
+        # Perform a lightweight check if API key is likely present
+        try:
+            openai_client.models.list(limit=1) # Check connection/key without heavy usage
+            print("OpenAI client initialized successfully.")
+        except openai.AuthenticationError:
+             print("Warning: OpenAI API Key is missing or invalid. OpenAI embeddings/models will fail if used.")
+        except Exception as e:
+             print(f"Warning: Could not verify OpenAI connection: {e}")
     except Exception as e:
         print(f"Error initializing OpenAI client: {e}")
 
@@ -57,116 +75,169 @@ initialize_models()
 
 # --- Embedding Functions ---
 
-def embed_documents(doc_chunks, batch_size=8):
+def embed_documents(doc_chunks, embedding_model_display_name, batch_size=8):
     """
-    Generate embeddings for document chunks using either MedCPT (GPU) or OpenAI (CPU).
+    Generate embeddings for document chunks using the *selected* model.
 
     Parameters:
         doc_chunks (list): List of text chunks.
-        batch_size (int): Batch size for processing (relevant for GPU).
+        embedding_model_display_name (str): The display name selected in the UI.
+        batch_size (int): Batch size for processing (relevant for GPU/MedCPT).
 
     Returns:
         np.array: Array of embeddings. Returns empty array on failure.
     """
-    if USE_GPU and article_model and article_tokenizer:
-        # --- GPU Mode: Use MedCPT Article Encoder ---
+    model_id = get_embedding_model_id(embedding_model_display_name)
+    print(f"Attempting to embed {len(doc_chunks)} chunks using selected model: {embedding_model_display_name} (ID: {model_id})")
+
+    # --- Try MedCPT if selected AND GPU available AND model loaded ---
+    if model_id == MEDCPT_ARTICLE_MODEL_ID and USE_GPU and medcpt_article_model and medcpt_article_tokenizer:
         all_embeds = []
-        print(f"Embedding {len(doc_chunks)} chunks using MedCPT (GPU)...")
+        print(f"Using MedCPT Article Encoder (GPU) with batch size {batch_size}...")
         for i in range(0, len(doc_chunks), batch_size):
             batch = doc_chunks[i:i + batch_size]
             try:
                 with torch.no_grad():
-                    encoded = article_tokenizer(
+                    encoded = medcpt_article_tokenizer(
                         batch, truncation=True, padding=True, return_tensors="pt", max_length=MAX_ARTICLE_LENGTH
                     )
                     encoded = {key: val.to(DEVICE) for key, val in encoded.items()}
-                    outputs = article_model(**encoded)
+                    outputs = medcpt_article_model(**encoded)
                     batch_embeds = outputs.last_hidden_state[:, 0, :].cpu().numpy()
                     all_embeds.append(batch_embeds)
             except Exception as e:
-                print(f"Error embedding batch {i//batch_size}: {e}")
+                print(f"Error embedding batch {i//batch_size} with MedCPT: {e}")
+                # Decide handling: skip batch, add zeros, or stop? Stopping for safety.
+                return np.array([])
 
         if all_embeds:
-            print("Document embedding finished.")
+            print("MedCPT document embedding finished.")
             return np.vstack(all_embeds)
         else:
-            print("Warning: No document embeddings were generated.")
+            print("Warning: No MedCPT document embeddings were generated.")
             return np.array([])
-    elif not USE_GPU and openai_client and EMBEDDING_MODEL:
-        # --- CPU Mode: Use OpenAI Embedding API ---
+
+    # --- Try OpenAI if selected AND client available ---
+    elif model_id == OPENAI_EMBEDDING_MODEL_ID and openai_client:
         embeddings = []
-        print(f"Embedding {len(doc_chunks)} chunks using OpenAI '{EMBEDDING_MODEL}' (CPU)...")
+        print(f"Using OpenAI Embedding API ('{model_id}', CPU/Cloud)...")
         for i, text in enumerate(doc_chunks):
             try:
                 if not text or text.isspace():
                     print(f"Warning: Skipping empty chunk at index {i}.")
+                    # Need to handle potential index misalignment if skipping.
+                    # For simplicity, let's add a zero vector of the correct dimension.
+                    dim = get_embedding_dimension(embedding_model_display_name)
+                    embeddings.append(np.zeros(dim, dtype=np.float32))
                     continue
-                response = openai_client.embeddings.create(input=text, model=EMBEDDING_MODEL)
+
+                response = openai_client.embeddings.create(input=text, model=model_id)
                 embed = response.data[0].embedding
                 embeddings.append(embed)
-            except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
-                 print("Error: OpenAI API Key is missing. Cannot generate embeddings. Please set the key.")
-                 return np.array([]) # Stop embedding process
+            except openai.APIKeyMissingError:
+                print("Error: OpenAI API Key is missing. Cannot generate embeddings. Please set the key.")
+                return np.array([]) # Stop embedding process
+            except openai.AuthenticationError:
+                print("Error: OpenAI API Key is invalid.")
+                return np.array([])
             except Exception as e:
                 print(f"Error embedding chunk {i} with OpenAI: {e}")
-        print("Document embedding finished.")
+                # Add zero vector on error to maintain alignment
+                dim = get_embedding_dimension(embedding_model_display_name)
+                embeddings.append(np.zeros(dim, dtype=np.float32))
+
+        print("OpenAI document embedding finished.")
         return np.array(embeddings)
+
+    # --- Handle Fallback/Error Cases ---
     else:
-        # Handle cases where models/clients aren't initialized
-        if USE_GPU:
-            print("Error: MedCPT models not available for GPU embedding.")
+        if model_id == MEDCPT_ARTICLE_MODEL_ID:
+            if not USE_GPU:
+                print(f"Error: Cannot use MedCPT ('{embedding_model_display_name}') without a GPU.")
+            elif not medcpt_article_model or not medcpt_article_tokenizer:
+                 print(f"Error: MedCPT model ('{embedding_model_display_name}') not loaded properly.")
+            else:
+                 print(f"Error: Unknown issue preventing MedCPT usage for '{embedding_model_display_name}'.")
+        elif model_id == OPENAI_EMBEDDING_MODEL_ID:
+            if not openai_client:
+                print(f"Error: OpenAI client not available for '{embedding_model_display_name}'. Check API key.")
+            else:
+                 print(f"Error: Unknown issue preventing OpenAI usage for '{embedding_model_display_name}'.")
         else:
-            print(f"Error: OpenAI client or model '{EMBEDDING_MODEL}' not available for CPU embedding.")
+            print(f"Error: Selected embedding model '{embedding_model_display_name}' is not recognized or supported.")
+
         return np.array([])
 
-def embed_query(query):
+
+def embed_query(query, embedding_model_display_name):
     """
-    Generate embedding for a single query using either MedCPT (GPU) or OpenAI (CPU).
+    Generate embedding for a single query using the *selected* model.
 
     Parameters:
         query (str): Input query.
+        embedding_model_display_name (str): The display name selected in the UI.
 
     Returns:
         np.array: Query embedding (shape [1, embedding_dim]). Returns None on failure.
     """
-    if USE_GPU and query_model and query_tokenizer:
-        # --- GPU Mode: Use MedCPT Query Encoder ---
-        print("Embedding query using MedCPT (GPU)...")
+    model_id = get_embedding_model_id(embedding_model_display_name)
+    print(f"Attempting to embed query using selected model: {embedding_model_display_name} (ID: {model_id})")
+
+    if not query or query.isspace():
+        print("Error: Cannot embed empty query.")
+        return None
+
+    # --- Try MedCPT if selected AND GPU available AND model loaded ---
+    if model_id == MEDCPT_ARTICLE_MODEL_ID and USE_GPU and medcpt_query_model and medcpt_query_tokenizer:
+        # Note: Assuming query model corresponds to article model selection for MedCPT
+        print("Using MedCPT Query Encoder (GPU)...")
         try:
             with torch.no_grad():
-                encoded = query_tokenizer(
+                encoded = medcpt_query_tokenizer(
                     query, truncation=True, padding=True, return_tensors="pt", max_length=MAX_QUERY_LENGTH
                 )
                 encoded = {key: val.to(DEVICE) for key, val in encoded.items()}
-                outputs = query_model(**encoded)
+                outputs = medcpt_query_model(**encoded)
                 query_embedding = outputs.last_hidden_state[:, 0, :].cpu().numpy()
-            print("Query embedding finished.")
-            return query_embedding
+            print("MedCPT query embedding finished.")
+            return query_embedding # Shape should be [1, 768]
         except Exception as e:
             print(f"Error embedding query with MedCPT: {e}")
             return None
-    elif not USE_GPU and openai_client and EMBEDDING_MODEL:
-        # --- CPU Mode: Use OpenAI Embedding API ---
-        print(f"Embedding query using OpenAI '{EMBEDDING_MODEL}' (CPU)...")
+
+    # --- Try OpenAI if selected AND client available ---
+    elif model_id == OPENAI_EMBEDDING_MODEL_ID and openai_client:
+        print(f"Using OpenAI Embedding API ('{model_id}', CPU/Cloud)...")
         try:
-            if not query or query.isspace():
-                print("Error: Cannot embed empty query.")
-                return None
-            response = openai_client.embeddings.create(input=query, model=EMBEDDING_MODEL)
+            response = openai_client.embeddings.create(input=query, model=model_id)
             embed = response.data[0].embedding
-            print("Query embedding finished.")
-            return np.array([embed])
-        except openai.APIKeyMissingError: # Catch using openai.APIKeyMissingError
-            print("Error: OpenAI API Key is missing. Cannot generate query embedding. Please set the key.")
+            print("OpenAI query embedding finished.")
+            return np.array([embed]) # Shape needs to be [1, 1536] for FAISS search
+        except openai.APIKeyMissingError:
+            print("Error: OpenAI API Key is missing. Cannot generate query embedding.")
+            return None
+        except openai.AuthenticationError:
+            print("Error: OpenAI API Key is invalid.")
             return None
         except Exception as e:
             print(f"Error embedding query with OpenAI: {e}")
             return None
-    else:
-        # Handle cases where models/clients aren't initialized
-        if USE_GPU:
-            print("Error: MedCPT query model not available for GPU embedding.")
-        else:
-            print(f"Error: OpenAI client or model '{EMBEDDING_MODEL}' not available for CPU embedding.")
-        return None
 
+    # --- Handle Fallback/Error Cases ---
+    else:
+        if model_id == MEDCPT_ARTICLE_MODEL_ID:
+             if not USE_GPU:
+                 print(f"Error: Cannot use MedCPT ('{embedding_model_display_name}') for query embedding without a GPU.")
+             elif not medcpt_query_model or not medcpt_query_tokenizer:
+                  print(f"Error: MedCPT query model ('{embedding_model_display_name}') not loaded properly.")
+             else:
+                  print(f"Error: Unknown issue preventing MedCPT query embedding for '{embedding_model_display_name}'.")
+        elif model_id == OPENAI_EMBEDDING_MODEL_ID:
+             if not openai_client:
+                 print(f"Error: OpenAI client not available for query embedding ('{embedding_model_display_name}'). Check API key.")
+             else:
+                  print(f"Error: Unknown issue preventing OpenAI query embedding for '{embedding_model_display_name}'.")
+        else:
+             print(f"Error: Selected embedding model '{embedding_model_display_name}' is not recognized or supported for query embedding.")
+
+        return None

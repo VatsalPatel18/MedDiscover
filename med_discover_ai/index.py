@@ -2,14 +2,20 @@
 import faiss
 import numpy as np
 import os
-from med_discover_ai.config import INDEX_SAVE_PATH, EMBEDDING_DIMENSION, USE_GPU
+import torch # Keep torch import for USE_GPU check if needed, though logic changes
+from med_discover_ai.config import INDEX_SAVE_PATH
+# Removed EMBEDDING_DIMENSION and USE_GPU import as direct dependencies for logic here
+# Dimension and index type will be determined dynamically or passed in.
 
-def build_faiss_index(embeddings):
+def build_faiss_index(embeddings, use_ip_metric=None):
     """
-    Build a FAISS index from the given embeddings.
+    Build a FAISS index from the given embeddings, choosing metric dynamically.
 
     Parameters:
         embeddings (np.array): Array of embeddings (shape [N, D]).
+        use_ip_metric (bool, optional): Explicitly set to True for Inner Product (MedCPT),
+                                        False for L2 (OpenAI). If None, uses dimension
+                                        heuristic (768=IP, others=L2).
 
     Returns:
         faiss.Index or None: FAISS index if successful, None otherwise.
@@ -19,28 +25,24 @@ def build_faiss_index(embeddings):
         return None
 
     dimension = embeddings.shape[1]
-
-    # Verify dimension consistency
-    expected_dim = EMBEDDING_DIMENSION
-    if dimension != expected_dim:
-        print(f"Warning: Embedding dimension mismatch. Expected {expected_dim}, got {dimension}.")
-        # Decide how to handle: error out, or proceed with caution?
-        # For now, proceed but log warning. If critical, raise an error.
-
     print(f"Building FAISS index with dimension {dimension}...")
 
     try:
-        # Using Inner Product (IP) index for MedCPT as recommended by original paper/examples.
-        # For OpenAI embeddings (like ada-002), L2 (Euclidean distance) is more common.
-        # We choose based on the mode.
-        if USE_GPU:
-            # MedCPT typically uses Inner Product (cosine similarity after normalization)
-            print("Using IndexFlatIP (Inner Product) for MedCPT embeddings.")
+        # Determine Index Type (Metric)
+        if use_ip_metric is True:
+            print("Using IndexFlatIP (Inner Product) as explicitly requested.")
             index = faiss.IndexFlatIP(dimension)
-        else:
-            # OpenAI embeddings often use L2 (Euclidean distance)
-            print("Using IndexFlatL2 (Euclidean Distance) for OpenAI embeddings.")
+        elif use_ip_metric is False:
+            print("Using IndexFlatL2 (Euclidean Distance) as explicitly requested.")
             index = faiss.IndexFlatL2(dimension)
+        else:
+            # Heuristic based on dimension if not specified
+            if dimension == 768: # Likely MedCPT
+                print("Using IndexFlatIP (Inner Product) based on dimension 768 (heuristic for MedCPT).")
+                index = faiss.IndexFlatIP(dimension)
+            else: # Assume L2 for others (like OpenAI 1536)
+                print(f"Using IndexFlatL2 (Euclidean Distance) based on dimension {dimension} (heuristic for non-MedCPT).")
+                index = faiss.IndexFlatL2(dimension)
 
         # FAISS requires float32 type
         if embeddings.dtype != np.float32:
@@ -57,7 +59,7 @@ def build_faiss_index(embeddings):
 
 def save_index(index, path=INDEX_SAVE_PATH):
     """
-    Save the FAISS index to disk.
+    Save the FAISS index to disk. (No changes needed here)
 
     Parameters:
         index (faiss.Index): The FAISS index to save.
@@ -80,15 +82,18 @@ def save_index(index, path=INDEX_SAVE_PATH):
         print(f"Error saving FAISS index to {path}: {e}")
         return False
 
-def load_index(path=INDEX_SAVE_PATH):
+def load_index(path=INDEX_SAVE_PATH, expected_dim=None):
     """
-    Load the FAISS index from disk.
+    Load the FAISS index from disk, optionally checking its dimension.
 
     Parameters:
         path (str): The file path to load the index from.
+        expected_dim (int, optional): If provided, checks if the loaded index's
+                                      dimension matches this value.
 
     Returns:
-        faiss.Index or None: The loaded FAISS index, or None if loading fails.
+        faiss.Index or None: The loaded FAISS index, or None if loading fails or
+                             dimension mismatch occurs (if expected_dim is checked).
     """
     if not os.path.exists(path):
         print(f"Error: Index file not found at {path}.")
@@ -97,11 +102,21 @@ def load_index(path=INDEX_SAVE_PATH):
         print(f"Loading FAISS index from {path}...")
         index = faiss.read_index(path)
         print(f"Index loaded successfully with {index.ntotal} vectors and dimension {index.d}.")
-        # Optional: Verify dimension against config
-        if index.d != EMBEDDING_DIMENSION:
-             print(f"Warning: Loaded index dimension ({index.d}) differs from config ({EMBEDDING_DIMENSION}).")
+
+        # Verify dimension if expected_dim is provided
+        if expected_dim is not None and index.d != expected_dim:
+             # This is a critical error, as using the wrong model with the index will fail.
+             print(f"FATAL ERROR: Loaded index dimension ({index.d}) differs from expected dimension ({expected_dim}).")
+             print("This indicates a mismatch between the loaded index and the currently selected embedding model.")
+             print("Please ensure the correct embedding model is selected or re-process PDFs with that model.")
+             return None # Return None on dimension mismatch
+
         return index
     except Exception as e:
         print(f"Error loading FAISS index from {path}: {e}")
         return None
 
+# Optional: Function to load metadata separately if needed elsewhere
+# (Already present in retrieval.py, maybe keep it consolidated there)
+# def load_index_metadata(meta_path=DOC_META_PATH):
+#     # ... implementation ...

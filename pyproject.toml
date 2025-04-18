@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "med-discover-ai"
-version = "1.0.5"
+version = "1.0.6"
 description = "Med-Discover is an AI-powered tool designed to assist biomedical researchers by leveraging Retrieval-Augmented Generation (RAG) with fine-tuned LLMs on PubMed literature. It enables efficient document retrieval, knowledge extraction, and interactive querying from biomedical research papers, helping researchers find relevant insights quickly. The package supports both GPU-based embeddings (MedCPT) and CPU-friendly alternatives (GPT-4 embeddings), making it accessible for a wide range of users."
 authors = ["VatsalPatel18 <vatsal1804@gmail.com>"]
 license = "CC BY-NC-ND 4.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11" 
+python = ">=3.11,<4.0" 
 torch = ">=2.0.0"  
 torchvision = ">=0.15.0,<0.20.0"
 faiss-cpu = ">=1.7.0" 
@@ -22,7 +22,7 @@ rouge-score = ">=0.1.0"
 pandas = ">=2.0.0" 
 scipy = ">=1.10.0"  
 statsmodels = ">=0.14.0" 
-
+ollama = ">=0.2.0"
 
 [tool.poetry.scripts]
 med-discover-ai = "med_discover_ai.main:main"
