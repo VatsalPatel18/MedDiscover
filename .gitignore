@@ -1,3 +1,7 @@
 doc_metadata.json
 faiss_index.bin
 logs/
+__pycache__/
+*.pyc
+dist/
+cli_eval_outputs*/

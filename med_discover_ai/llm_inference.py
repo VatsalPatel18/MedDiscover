@@ -18,8 +18,8 @@ def initialize_llm_clients():
     # Initialize OpenAI Client
     try:
         openai_client = openai.OpenAI()
-        # Light check
-        openai_client.models.list(limit=1)
+        # Light check (compatible with OpenAI SDK >=2.x)
+        _ = openai_client.models.list()
         print("LLM Inference: OpenAI client initialized.")
     except openai.AuthenticationError:
         print("LLM Inference Warning: OpenAI API Key missing/invalid. OpenAI models unavailable.")

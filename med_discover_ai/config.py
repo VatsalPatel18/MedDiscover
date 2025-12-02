@@ -6,6 +6,7 @@ import torch
 # Determine if GPU is available. This affects default model choices and execution paths.
 USE_GPU = torch.cuda.is_available()
 DEVICE = "cuda" if USE_GPU else "cpu"
+ALLOW_MEDCPT_CPU = os.environ.get("ALLOW_MEDCPT_CPU", "0") == "1"
 print(f"GPU Available: {USE_GPU}, Using device: {DEVICE}")
 
 # --- Available Models ---
@@ -34,26 +35,22 @@ AVAILABLE_LLM_MODELS = [
 ]
 
 # --- Default Model Configuration (Based on GPU availability) ---
-if USE_GPU:
-    print('GPU detected. Setting defaults for GPU usage.')
-    # GPU mode defaults: MedCPT for embeddings, potentially a powerful OpenAI/Ollama model for LLM
+if USE_GPU or ALLOW_MEDCPT_CPU:
+    print('GPU detected. Setting defaults for GPU usage.' if USE_GPU else 'GPU not available, CPU override enabled for MedCPT.')
     DEFAULT_EMBEDDING_MODEL_NAME = "MedCPT (GPU Recommended)"
     DEFAULT_LLM_MODEL = "gpt-4o-mini" # Or could default to a powerful Ollama model if preferred
 
-    # MedCPT Specific Model Paths (only relevant if DEFAULT_EMBEDDING_MODEL_NAME is MedCPT)
-    ARTICLE_ENCODER_MODEL = AVAILABLE_EMBEDDING_MODELS[DEFAULT_EMBEDDING_MODEL_NAME]
-    QUERY_ENCODER_MODEL = "ncbi/MedCPT-Query-Encoder" # Assumes query encoder matches article encoder family
-    CROSS_ENCODER_MODEL = "ncbi/MedCPT-Cross-Encoder" # For re-ranking
+    ARTICLE_ENCODER_MODEL = AVAILABLE_EMBEDDING_MODELS["MedCPT (GPU Recommended)"]
+    QUERY_ENCODER_MODEL = "ncbi/MedCPT-Query-Encoder"
+    CROSS_ENCODER_MODEL = "ncbi/MedCPT-Cross-Encoder"
     EMBEDDING_DIMENSION = 768 # MedCPT embedding dimension
     OPENAI_EMBEDDING_MODEL_ID = AVAILABLE_EMBEDDING_MODELS["OpenAI Ada-002 (CPU/Cloud)"]
 
 else:
     print('GPU not available. Setting defaults for CPU usage.')
-    # CPU mode defaults: OpenAI for embeddings, a capable OpenAI/Ollama model for LLM
     DEFAULT_EMBEDDING_MODEL_NAME = "OpenAI Ada-002 (CPU/Cloud)"
-    DEFAULT_LLM_MODEL = "ollama:gemma3:4b" # Default to a local model for CPU-only
+    DEFAULT_LLM_MODEL = "ollama:gemma3:4b"
 
-    # Clear GPU-specific models
     ARTICLE_ENCODER_MODEL = None
     QUERY_ENCODER_MODEL = None
     CROSS_ENCODER_MODEL = None # Re-ranking is disabled on CPU anyway
@@ -108,4 +105,3 @@ def get_embedding_dimension(display_name):
         # Fallback or default dimension if unknown model selected
         print(f"Warning: Unknown embedding model '{display_name}', returning default dimension 768.")
         return 768 # Or choose a more appropriate default/error handling
-

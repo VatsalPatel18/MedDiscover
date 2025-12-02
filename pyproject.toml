@@ -5,11 +5,16 @@ description = "Med-Discover is an AI-powered tool designed to assist biomedical 
 authors = ["VatsalPatel18 <vatsal1804@gmail.com>"]
 license = "CC BY-NC-ND 4.0"
 readme = "README.md"
+include = [
+    { path = "med_discover_ai/eval_samples/sample_qa.csv", format = "wheel" },
+    { path = "med_discover_ai/eval_samples/sample_pdfs/*.pdf", format = "wheel" },
+    { path = "med_discover_ai/evaluation_runner_README.md", format = "wheel" }
+]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0" 
 torch = ">=2.0.0"  
-torchvision = ">=0.15.0,<0.20.0"
+torchvision = ">=0.15.0,<0.30.0"
 faiss-cpu = ">=1.7.0" 
 pypdf2 = ">=3.0.0" 
 transformers = ">=4.30.0,<4.50.0"
@@ -23,9 +28,12 @@ pandas = ">=2.0.0"
 scipy = ">=1.10.0"  
 statsmodels = ">=0.14.0" 
 ollama = ">=0.2.0"
+datasets = ">=2.14.0"
+ragas = ">=0.1.11"
 
 [tool.poetry.scripts]
 med-discover-ai = "med_discover_ai.main:main"
+meddiscover-eval = "med_discover_ai.cli_eval:main"
 
 
 [build-system]

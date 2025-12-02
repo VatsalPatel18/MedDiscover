@@ -1,4 +1,5 @@
 # med_discover_ai/embeddings.py
+import os
 import numpy as np
 import torch
 import openai # Import the base library
@@ -11,6 +12,9 @@ from med_discover_ai.config import (
 from med_discover_ai.config import ARTICLE_ENCODER_MODEL as MEDCPT_ARTICLE_MODEL_ID
 from med_discover_ai.config import QUERY_ENCODER_MODEL as MEDCPT_QUERY_MODEL_ID
 from med_discover_ai.config import OPENAI_EMBEDDING_MODEL_ID
+
+# Allow CPU fallback for MedCPT (set ALLOW_MEDCPT_CPU=1 to force load on CPU).
+ALLOW_MEDCPT_CPU = os.environ.get("ALLOW_MEDCPT_CPU", "0") == "1"
 
 # --- Global Variables for Models (initialized conditionally) ---
 # MedCPT models (loaded only if USE_GPU is True)
@@ -27,10 +31,13 @@ def initialize_models():
     global medcpt_article_tokenizer, medcpt_article_model, medcpt_query_tokenizer, medcpt_query_model
     global openai_client
 
-    if USE_GPU:
+    can_load_medcpt = USE_GPU or ALLOW_MEDCPT_CPU
+
+    if can_load_medcpt:
         try:
             from transformers import AutoTokenizer, AutoModel
-            print("GPU detected. Loading MedCPT models...")
+            device_note = "GPU" if USE_GPU else "CPU (ALLOW_MEDCPT_CPU=1)"
+            print(f"{'GPU detected' if USE_GPU else 'GPU not available, CPU override enabled'}. Loading MedCPT models on {device_note}...")
             # Load Article Encoder
             if MEDCPT_ARTICLE_MODEL_ID:
                 medcpt_article_tokenizer = AutoTokenizer.from_pretrained(MEDCPT_ARTICLE_MODEL_ID)
@@ -54,19 +61,19 @@ def initialize_models():
         except Exception as e:
             print(f"Error loading MedCPT models: {e}")
     else:
-        print("GPU not available. MedCPT models will not be loaded.")
+        print("GPU not available and ALLOW_MEDCPT_CPU not set. MedCPT models will not be loaded.")
 
     # Initialize OpenAI client
     try:
         openai_client = openai.OpenAI()
         # Perform a lightweight check if API key is likely present
         try:
-            openai_client.models.list(limit=1) # Check connection/key without heavy usage
+            _ = openai_client.models.list()  # compatibility with OpenAI SDK >=2.x
             print("OpenAI client initialized successfully.")
         except openai.AuthenticationError:
-             print("Warning: OpenAI API Key is missing or invalid. OpenAI embeddings/models will fail if used.")
+            print("Warning: OpenAI API Key is missing or invalid. OpenAI embeddings/models will fail if used.")
         except Exception as e:
-             print(f"Warning: Could not verify OpenAI connection: {e}")
+            print(f"Warning: Could not verify OpenAI connection: {e}")
     except Exception as e:
         print(f"Error initializing OpenAI client: {e}")
 
@@ -90,10 +97,16 @@ def embed_documents(doc_chunks, embedding_model_display_name, batch_size=8):
     model_id = get_embedding_model_id(embedding_model_display_name)
     print(f"Attempting to embed {len(doc_chunks)} chunks using selected model: {embedding_model_display_name} (ID: {model_id})")
 
-    # --- Try MedCPT if selected AND GPU available AND model loaded ---
-    if model_id == MEDCPT_ARTICLE_MODEL_ID and USE_GPU and medcpt_article_model and medcpt_article_tokenizer:
+    # --- Try MedCPT if selected AND available (GPU or CPU override) ---
+    if (
+        model_id == MEDCPT_ARTICLE_MODEL_ID
+        and medcpt_article_model
+        and medcpt_article_tokenizer
+        and (USE_GPU or ALLOW_MEDCPT_CPU)
+    ):
         all_embeds = []
-        print(f"Using MedCPT Article Encoder (GPU) with batch size {batch_size}...")
+        device_note = "GPU" if USE_GPU else "CPU override"
+        print(f"Using MedCPT Article Encoder ({device_note}) with batch size {batch_size}...")
         for i in range(0, len(doc_chunks), batch_size):
             batch = doc_chunks[i:i + batch_size]
             try:
@@ -152,12 +165,12 @@ def embed_documents(doc_chunks, embedding_model_display_name, batch_size=8):
     # --- Handle Fallback/Error Cases ---
     else:
         if model_id == MEDCPT_ARTICLE_MODEL_ID:
-            if not USE_GPU:
-                print(f"Error: Cannot use MedCPT ('{embedding_model_display_name}') without a GPU.")
+            if not (USE_GPU or ALLOW_MEDCPT_CPU):
+                print(f"Error: Cannot use MedCPT ('{embedding_model_display_name}') without GPU or ALLOW_MEDCPT_CPU=1.")
             elif not medcpt_article_model or not medcpt_article_tokenizer:
-                 print(f"Error: MedCPT model ('{embedding_model_display_name}') not loaded properly.")
+                print(f"Error: MedCPT model ('{embedding_model_display_name}') not loaded properly.")
             else:
-                 print(f"Error: Unknown issue preventing MedCPT usage for '{embedding_model_display_name}'.")
+                print(f"Error: Unknown issue preventing MedCPT usage for '{embedding_model_display_name}'.")
         elif model_id == OPENAI_EMBEDDING_MODEL_ID:
             if not openai_client:
                 print(f"Error: OpenAI client not available for '{embedding_model_display_name}'. Check API key.")
@@ -188,9 +201,14 @@ def embed_query(query, embedding_model_display_name):
         return None
 
     # --- Try MedCPT if selected AND GPU available AND model loaded ---
-    if model_id == MEDCPT_ARTICLE_MODEL_ID and USE_GPU and medcpt_query_model and medcpt_query_tokenizer:
-        # Note: Assuming query model corresponds to article model selection for MedCPT
-        print("Using MedCPT Query Encoder (GPU)...")
+    if (
+        model_id == MEDCPT_ARTICLE_MODEL_ID
+        and medcpt_query_model
+        and medcpt_query_tokenizer
+        and (USE_GPU or ALLOW_MEDCPT_CPU)
+    ):
+        device_note = "GPU" if USE_GPU else "CPU override"
+        print(f"Using MedCPT Query Encoder ({device_note})...")
         try:
             with torch.no_grad():
                 encoded = medcpt_query_tokenizer(
