@@ -27,11 +27,9 @@ AVAILABLE_LLM_MODELS = [
     "ollama:gemma3:4b", # Added Gemma3 4B
     "ollama:llama3:8b", # Kept standard Llama3 8B
     "ollama:phi3:mini",
-    # New OpenAI GPT-4.1 series
+    # New OpenAI GPT-4.1 series (only nano/mini variants)
     "gpt-4.1-nano",
-    "gpt-4.1-2025-04-14",
     "gpt-4.1-mini",
-    "gpt-4.1-mini-2025-04-14",
 ]
 
 # --- Default Model Configuration (Based on GPU availability) ---

@@ -1,3 +1,4 @@
 query,gt
-"What is the main topic discussed in the document?","This is a placeholder ground truth answer."
-"Summarize one key finding from the document.","This is another placeholder ground truth answer."
+"What is the main topic of the breast cancer paper?","Circulating microRNAs predicting chemotherapy-induced toxicities in primary breast cancer patients."
+"What key biomarker type is studied for toxicity prediction?","Circulating microRNAs are studied as biomarkers for toxicity prediction."
+"Which cancer setting is being treated in the study?","Primary breast cancer treated with neoadjuvant chemotherapy." 

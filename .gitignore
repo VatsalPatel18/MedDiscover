@@ -4,4 +4,8 @@ logs/
 __pycache__/
 *.pyc
 dist/
+build/
+*.egg-info/
+med_discover_ai.egg-info/
+vatsalpatel18_rag_llm_metabolomics.egg-info/
 cli_eval_outputs*/
