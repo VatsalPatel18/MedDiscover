@@ -22,11 +22,6 @@ AVAILABLE_LLM_MODELS = [
     # OpenAI Models (only 4.1 variants retained)
     "gpt-4.1-nano",
     "gpt-4.1-mini",
-    # Ollama Models (Prefix with 'ollama:' for easy identification)
-    "ollama:gemma3:1b", # Added Gemma3 1B
-    "ollama:gemma3:4b", # Added Gemma3 4B
-    "ollama:llama3:8b", # Kept standard Llama3 8B
-    "ollama:phi3:mini",
 ]
 
 # --- Default Model Configuration (Based on GPU availability) ---
@@ -44,7 +39,7 @@ if USE_GPU or ALLOW_MEDCPT_CPU:
 else:
     print('GPU not available. Setting defaults for CPU usage.')
     DEFAULT_EMBEDDING_MODEL_NAME = "OpenAI Ada-002 (CPU/Cloud)"
-    DEFAULT_LLM_MODEL = "ollama:gemma3:4b"
+    DEFAULT_LLM_MODEL = "gpt-4.1-mini"
 
     ARTICLE_ENCODER_MODEL = None
     QUERY_ENCODER_MODEL = None

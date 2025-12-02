@@ -1,6 +1,9 @@
 # med_discover_ai/llm_inference.py
 import openai
-import ollama # Import the ollama library
+try:
+    import ollama  # Optional; skip if not installed
+except ImportError:
+    ollama = None
 from med_discover_ai.config import (
     DEFAULT_LLM_MODEL, DEFAULT_MAX_TOKENS,
     OLLAMA_BASE_URL # Import Ollama base URL
@@ -28,17 +31,20 @@ def initialize_llm_clients():
         print(f"LLM Inference Warning: Could not initialize OpenAI client: {e}")
         openai_client = None
 
-    # Initialize Ollama Client
-    try:
-        ollama_client = ollama.Client(host=OLLAMA_BASE_URL)
-        # Light check to see if server is reachable
-        ollama_client.list() # Lists models available locally
-        print(f"LLM Inference: Ollama client initialized (connected to {OLLAMA_BASE_URL}).")
-    except Exception as e:
-        # Catch connection errors, etc.
-        print(f"LLM Inference Warning: Could not initialize Ollama client at {OLLAMA_BASE_URL}: {e}")
-        print("Ensure the Ollama server is running and accessible.")
-        ollama_client = None
+    # Initialize Ollama Client (optional)
+    if ollama is not None:
+        try:
+            ollama_client = ollama.Client(host=OLLAMA_BASE_URL)
+            # Light check to see if server is reachable
+            ollama_client.list() # Lists models available locally
+            print(f"LLM Inference: Ollama client initialized (connected to {OLLAMA_BASE_URL}).")
+        except Exception as e:
+            # Catch connection errors, etc.
+            print(f"LLM Inference Warning: Could not initialize Ollama client at {OLLAMA_BASE_URL}: {e}")
+            print("Ensure the Ollama server is running and accessible.")
+            ollama_client = None
+    else:
+        print("LLM Inference: Ollama client not installed; Ollama models disabled.")
 
 # Initialize clients when module loads
 initialize_llm_clients()
