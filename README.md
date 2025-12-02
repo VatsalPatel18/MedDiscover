@@ -30,3 +30,4 @@ meddiscover-eval \
 - For Ada-based retrieval, switch `--embedding_model` to `OpenAI Ada-002 (CPU/Cloud)`.
 - RAGAS metrics are optional; if dependencies are missing or the QA CSV lacks a `reference` column, they fall back to `None`.
 - Re-ranking stays disabled on CPU; enable `--rerank` only when a GPU and cross-encoder are available.
+- Ollama models are available in both the UI and CLI (prefix with `ollama:`), e.g. `--llm_models ollama:gemma3:4b`.

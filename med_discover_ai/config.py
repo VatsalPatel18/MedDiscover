@@ -19,24 +19,21 @@ AVAILABLE_EMBEDDING_MODELS = {
 # Define available LLM models for the UI dropdown
 # Combine OpenAI and Ollama models
 AVAILABLE_LLM_MODELS = [
-    # OpenAI Models
-    "gpt-4o",
-    "gpt-4o-mini", # Simplified name
+    # OpenAI Models (only 4.1 variants retained)
+    "gpt-4.1-nano",
+    "gpt-4.1-mini",
     # Ollama Models (Prefix with 'ollama:' for easy identification)
     "ollama:gemma3:1b", # Added Gemma3 1B
     "ollama:gemma3:4b", # Added Gemma3 4B
     "ollama:llama3:8b", # Kept standard Llama3 8B
     "ollama:phi3:mini",
-    # New OpenAI GPT-4.1 series (only nano/mini variants)
-    "gpt-4.1-nano",
-    "gpt-4.1-mini",
 ]
 
 # --- Default Model Configuration (Based on GPU availability) ---
 if USE_GPU or ALLOW_MEDCPT_CPU:
     print('GPU detected. Setting defaults for GPU usage.' if USE_GPU else 'GPU not available, CPU override enabled for MedCPT.')
     DEFAULT_EMBEDDING_MODEL_NAME = "MedCPT (GPU Recommended)"
-    DEFAULT_LLM_MODEL = "gpt-4o-mini" # Or could default to a powerful Ollama model if preferred
+    DEFAULT_LLM_MODEL = "gpt-4.1-mini"
 
     ARTICLE_ENCODER_MODEL = AVAILABLE_EMBEDDING_MODELS["MedCPT (GPU Recommended)"]
     QUERY_ENCODER_MODEL = "ncbi/MedCPT-Query-Encoder"
